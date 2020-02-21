@@ -8,7 +8,8 @@ const sockets = socketio(server);
 
 const game = {
     players: {},
-    rooms: {}
+    rooms: {},
+    match: {}
 };
 
 sockets.on('connection', (socket) => {
@@ -23,7 +24,7 @@ sockets.on('connection', (socket) => {
     socket.on('disconnect', () => {
         console.log(`${socket.id} desconectou.`)
         sendMessage(game.players[socket.id], 'saiu');
-        leaveRoom(socket.id);
+        leaveRoom(socket);
 
         delete game.players[socket.id];
 
@@ -52,7 +53,7 @@ sockets.on('connection', (socket) => {
     });
 
     socket.on('LeaveRoom', () => {
-        leaveRoom(socket.id);
+        leaveRoom(socket);
 
         refreshPlayers();
         refreshRooms();
@@ -67,17 +68,30 @@ sockets.on('connection', (socket) => {
 
         game.players[socket.id].room = roomId;
 
+        const room = game.rooms[roomId];
+        if (room.player1 && room.player2) {
+            game.match[roomId] = {
+                score1: 0,
+                score2: 0,
+                status: 'START'
+            };
+        }
+
         refreshPlayers();
         refreshRooms();
+        refreshMatch(roomId);
         sendMessage(game.players[socket.id], 'entrou numa sala');
     });
 });
 
-const leaveRoom = (socketId) => {
+const leaveRoom = (socket) => {
+    const socketId = socket.id;
     const roomId = game.players[socketId].room;
     const room = game.rooms[roomId];
 
     if (room) {
+        socket.leave(roomId);
+
         game.players[socketId].room = undefined;
 
         if (socketId === room.player1) {
@@ -102,6 +116,10 @@ const refreshPlayers = () => {
 
 const refreshRooms = () => {
     sockets.emit('RoomsRefresh', game.rooms);
+};
+
+const refreshMatch = (roomId) => {
+    sockets.to(roomId).emit('MatchRefresh', game.match[roomId]);
 };
 
 app.get('/', (req, res) => res.send('Hello World!'));
