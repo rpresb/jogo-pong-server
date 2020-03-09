@@ -296,5 +296,5 @@ const refreshMatch = (roomId) => {
 
 app.get('/', (req, res) => res.send('Hello World!'));
 
-const port = 4000;
-server.listen(port, () => console.log(`Server rodando na porta ${port}!`));
+const PORT = process.env.PORT || 4000;
+server.listen(PORT, () => console.log(`Server rodando na porta ${PORT}!`));
